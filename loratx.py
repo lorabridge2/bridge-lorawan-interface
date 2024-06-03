@@ -1,8 +1,13 @@
+import os
+
 import redis
 import serial
 
+
 def fetch_redis_string(ieee, hash):
-    command = "GET lorabridge:device:{}:message:{}".format(ieee.decode("utf-8"), hash.decode("utf-8"))
+    command = "GET lorabridge:device:{}:message:{}".format(
+        ieee.decode("utf-8"), hash.decode("utf-8")
+    )
     print(command)
     reply = redis_client.execute_command(command)
 
@@ -10,6 +15,7 @@ def fetch_redis_string(ieee, hash):
         return reply
     else:
         return None
+
 
 def fetch_redis_queues():
     reply = redis_client.smembers("lorabridge:device:index")
@@ -19,9 +25,10 @@ def fetch_redis_queues():
     else:
         return None
 
+
 def fetch_redis_message(ieee):
     command = "ZPOPMIN lorabridge:queue:{}".format(ieee.decode("utf-8"))
-    #print(command)
+    # print(command)
     reply = redis_client.execute_command(command)
 
     if reply:
@@ -29,9 +36,14 @@ def fetch_redis_message(ieee):
     else:
         return None
 
+
 # Assuming redis_client is already initialized
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(
+    host=os.environ.get("REDIS_HOST", "localhost"),
+    port=int(os.environ.get("REDIS_PORT", 6379)),
+    db=int(os.environ.get("REDIS_DB", 0)),
+)
 
 
 def fetch_one_message():
@@ -50,40 +62,44 @@ def fetch_one_message():
         break
     return None
 
+
 def push_to_command_queue(lb_command: str):
     redis_client.lpush("lbcommands", lb_command)
 
+
 def main():
     # Define serial port and baudrate
-    serial_port = 'COM4'#/dev/ttyACM0'  # Change this to your serial port
+    serial_port = os.environ.get(
+        "SERIAL_PORT", "/dev/ttyACM0"
+    )  # COM4'  # Change this to your serial port
     baudrate = 115200  # Change this to match the baudrate of your device
-    
 
     # Open serial connection
     ser = serial.Serial(serial_port, baudrate)
 
     while True:
         try:
-        
-                # Read data from serial port
-                data = ser.readline().decode("utf-8").strip()
-                print(data)
 
-                if "LBDATA" in data:
-                    print("Data: ", data[8:], " being pushed onto command stack")
-                    push_to_command_queue(data[8:])
+            # Read data from serial port
+            data = ser.readline().decode("utf-8").strip()
+            print(data)
 
-                # Transmit "tx_ok" back to the serial interface
-                lb_message = fetch_one_message()
-                if lb_message != None:
-                    ser.write(lb_message)
-                    print("Sent a message")
-                else:
-                    print("Queue empty, sending nothing...")
+            if "LBDATA" in data:
+                print("Data: ", data[8:], " being pushed onto command stack")
+                push_to_command_queue(data[8:])
+
+            # Transmit "tx_ok" back to the serial interface
+            lb_message = fetch_one_message()
+            if lb_message != None:
+                ser.write(lb_message)
+                print("Sent a message")
+            else:
+                print("Queue empty, sending nothing...")
         except KeyboardInterrupt:
             print("Exiting...")
             ser.close()
             break
+
 
 if __name__ == "__main__":
     main()
