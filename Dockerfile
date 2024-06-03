@@ -1,7 +1,7 @@
 FROM python:3.10-alpine as build
 
 WORKDIR /home/lorawan
-RUN apk add --no-cache gcc libc-dev g++ curl-dev libcurl
+RUN apk add --no-cache gcc libc-dev g++
 RUN pip install --no-cache-dir pipenv
 COPY Pipfile* ./
 RUN pipenv install --system --clear
