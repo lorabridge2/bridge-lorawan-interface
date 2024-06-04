@@ -5,7 +5,7 @@ import serial
 
 
 def fetch_redis_string(ieee, hash):
-    command = "GET lorabridge:device:{}:message:{}".format(
+    command = "GETDEL lorabridge:device:{}:message:{}".format(
         ieee.decode("utf-8"), hash.decode("utf-8")
     )
     print(command)
