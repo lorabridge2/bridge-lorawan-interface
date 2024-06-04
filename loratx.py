@@ -89,12 +89,13 @@ def main():
                 push_to_command_queue(data[8:])
 
             # Transmit "tx_ok" back to the serial interface
-            lb_message = fetch_one_message()
-            if lb_message != None:
-                ser.write(lb_message)
-                print("Sent a message")
-            else:
-                print("Queue empty, sending nothing...")
+            if "tx_token" in data:
+                lb_message = fetch_one_message()
+                if lb_message != None:
+                    ser.write(lb_message)
+                    print("Sent a message")
+                else:
+                    print("Queue empty, sending nothing...")
         except KeyboardInterrupt:
             print("Exiting...")
             ser.close()
