@@ -8,8 +8,10 @@ import json
 lbdata_types = {
     "data":0,
     "timesync_req": 1,
-    "system_alert": 2,
-    "user_alert": 3
+    "system_event": 2,
+    "user_event": 3,
+    "lbflow_digest": 4,
+    "lbdevice_join": 5
 }
 
 def fetch_redis_string(ieee: str, hash: str) -> str | None:
