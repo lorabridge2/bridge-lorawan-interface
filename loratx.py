@@ -2,7 +2,15 @@ import os
 
 import redis
 import serial
+import time
+import json
 
+lbdata_types = {
+    "data":0,
+    "timesync_req": 1,
+    "system_alert": 2,
+    "user_alert": 3
+}
 
 def fetch_redis_string(ieee: str, hash: str) -> str | None:
     command = "GETDEL lorabridge:device:{}:message:{}".format(
@@ -41,6 +49,31 @@ def fetch_one_message() -> str | None:
                 continue
             return fetch_redis_string(redis_queue, redis_msg[0])
 
+def fetch_lbdata() -> dict | None:
+    lb_data_string = fetch_one_message()
+    lb_data = {}
+
+    if lb_data_string != None:
+        try:
+            lb_data = json.loads(lb_data_string)
+        except ValueError as e:
+            print("Error: LB Data string has invalid format")
+            return None
+        return lb_data
+
+def fetch_and_compress_lbdata() -> str | None:
+    lb_data = fetch_lbdata()
+
+    lb_data_key = list(lb_data.keys())[0]
+
+    if lb_data_key not in lbdata_types.keys():
+        print("Error: LB data type not found")
+        return None
+    
+    lb_compressed_data = str(lbdata_types[lb_data_key])+lb_data[lb_data_key]
+
+    return lb_compressed_data
+
 
 def push_to_command_queue(lb_command: str) -> None:
     redis_client.lpush("lbcommands", lb_command)
@@ -56,6 +89,9 @@ def main():
     # Open serial connection
     ser = serial.Serial(serial_port, baudrate)
 
+    heartbeat_time_start = time.time
+    heartbeat_interval = 60
+
     while True:
         # Read data from serial port
         data = ser.readline().decode("utf-8").strip()
@@ -65,14 +101,22 @@ def main():
             print("Data: ", data[8:], " being pushed onto command stack")
             push_to_command_queue(data[8:])
 
+        if "LBTIME" in data:
+            print("Updating system time with an epoch value got from LoRaWAN timesync response:", data[8:])
+
         # Transmit "tx_ok" back to the serial interface
         if "tx_token" in data:
-            lb_message = fetch_one_message()
+            lb_message = fetch_and_compress_lbdata()
             if lb_message != None:
                 ser.write(lb_message)
                 print("Sent a message")
             else:
-                print("Queue empty, sending nothing...")
+                if time.time() - heartbeat_time_start > heartbeat_interval:
+                    heartbeat_time_start = time.time()
+                    ser.write("hb")
+                    print("Sent a heartbeat message")
+                else:
+                    print("Queue empty, sending nothing...")
 
 
 if __name__ == "__main__":
