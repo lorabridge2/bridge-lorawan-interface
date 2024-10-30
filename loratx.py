@@ -11,7 +11,8 @@ lbdata_types = {
     "system_event": 2,
     "user_event": 3,
     "lbflow_digest": 4,
-    "lbdevice_join": 5
+    "lbdevice_join": 5,
+    "hearthbeat": 6
 }
 
 def fetch_redis_string(ieee: str, hash: str) -> str | None:
@@ -94,6 +95,9 @@ def main():
     heartbeat_time_start = time.time
     heartbeat_interval = 60
 
+    timesync_ongoing = True
+    timesync_requested = False
+
     while True:
         # Read data from serial port
         data = ser.readline().decode("utf-8").strip()
@@ -105,9 +109,16 @@ def main():
 
         if "LBTIME" in data:
             print("Updating system time with an epoch value got from LoRaWAN timesync response:", data[8:])
+            date_call_cmd = "date -d \'"+data[8:]+"\'"
+            os.system(date_call_cmd)
+            timesync_ongoing = False
 
+
+        if "tx_token" in data and timesync_ongoing and timesync_requested == False:
+            ser.write(str(lbdata_types["timesync_req"]));
+            timesync_requested = True
         # Transmit "tx_ok" back to the serial interface
-        if "tx_token" in data:
+        elif "tx_token" in data and timesync_ongoing == False:
             lb_message = fetch_and_compress_lbdata()
             if lb_message != None:
                 ser.write(lb_message)
