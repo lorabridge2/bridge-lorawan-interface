@@ -65,6 +65,7 @@ def fetch_lbdata() -> dict | None:
         return lb_data
 
 def fetch_and_compress_lbdata() -> str | None:
+    
     lb_data = fetch_lbdata()
 
     lb_data_key = list(lb_data.keys())[0]
@@ -95,7 +96,7 @@ def main():
     heartbeat_time_start = time.time
     heartbeat_interval = 60
 
-    timesync_ongoing = True
+    timesync_ongoing = False
     timesync_requested = False
 
     while True:
