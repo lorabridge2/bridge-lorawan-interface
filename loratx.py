@@ -56,6 +56,8 @@ def fetch_lbdata() -> dict | None:
     lb_data_string = fetch_one_message()
     lb_data = {}
 
+    print("lbdata fetch got: ", lb_data_string)
+
     if lb_data_string != None:
         try:
             lb_data = json.loads(lb_data_string)
