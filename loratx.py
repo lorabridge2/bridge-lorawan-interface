@@ -4,6 +4,7 @@ import redis
 import serial
 import time
 import json
+import base64
 
 lbdata_types = {
     "data":0,
@@ -67,7 +68,7 @@ def fetch_lbdata() -> dict | None:
         return lb_data
 
 def fetch_and_compress_lbdata() -> str | None:
-    
+
     lb_data = fetch_lbdata()
 
     lb_data_key = list(lb_data.keys())[0]
@@ -75,8 +76,9 @@ def fetch_and_compress_lbdata() -> str | None:
     if lb_data_key not in lbdata_types.keys():
         print("Error: LB data type not found")
         return None
-    
-    lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
+
+    # lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
+    lb_compressed_data = str(lbdata_types[lb_data_key]).encode() + base64.b64decode(lb_data[lb_data_key])
 
     return lb_compressed_data
 
@@ -118,7 +120,7 @@ def main():
 
 
         if "tx_token" in data and timesync_ongoing and timesync_requested == False:
-            ser.write(str(lbdata_types["timesync_req"]).encode());
+            ser.write(str(lbdata_types["timesync_req"]).encode())
             timesync_requested = True
         # Transmit "tx_ok" back to the serial interface
         elif "tx_token" in data and timesync_ongoing == False:
