@@ -73,7 +73,7 @@ def fetch_and_compress_lbdata() -> str | None:
         print("Error: LB data type not found")
         return None
     
-    lb_compressed_data = str(lbdata_types[lb_data_key])+lb_data[lb_data_key]
+    lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
 
     return lb_compressed_data
 
@@ -115,7 +115,7 @@ def main():
 
 
         if "tx_token" in data and timesync_ongoing and timesync_requested == False:
-            ser.write(str(lbdata_types["timesync_req"]));
+            ser.write(str(lbdata_types["timesync_req"]).encode());
             timesync_requested = True
         # Transmit "tx_ok" back to the serial interface
         elif "tx_token" in data and timesync_ongoing == False:
