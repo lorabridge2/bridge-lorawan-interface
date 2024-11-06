@@ -16,6 +16,14 @@ lbdata_types = {
     "hearthbeat": 6
 }
 
+def fetch_redis_flow_digest() -> str | None:
+    command = "LPOP lorabridge:flows:digests"
+
+    if reply := redis_client.execute_command(command):
+        return reply
+    else:
+        return None
+
 def fetch_redis_string(ieee: str, hash: str) -> str | None:
     command = "GETDEL lorabridge:device:{}:message:{}".format(
         ieee.decode("utf-8"), hash.decode("utf-8")
@@ -44,6 +52,13 @@ redis_client = redis.Redis(
 
 
 def fetch_one_message() -> str | None:
+
+    # Priority order: Critical system events, digests, sensor data
+
+    digest_value = fetch_redis_flow_digest()
+    if digest_value != None:
+        return digest_value
+
     redis_queues = fetch_redis_queues()
 
     if redis_queues != None:
@@ -77,8 +92,9 @@ def fetch_and_compress_lbdata() -> str | None:
         print("Error: LB data type not found")
         return None
 
-    # lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
     lb_compressed_data = str(lbdata_types[lb_data_key]).encode() + base64.b64decode(lb_data[lb_data_key])
+    # lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
+    
 
     return lb_compressed_data
 
