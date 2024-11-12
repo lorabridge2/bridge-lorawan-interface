@@ -23,6 +23,14 @@ def fetch_redis_flow_digest() -> str | None:
         return reply
     else:
         return None
+    
+def fetch_redis_device_join() -> str | None:
+    command = "LPOP lorabridge:device:join"
+
+    if reply := redis_client.execute_command(command):
+        return reply
+    else:
+        return None
 
 def fetch_redis_string(ieee: str, hash: str) -> str | None:
     command = "GETDEL lorabridge:device:{}:message:{}".format(
@@ -53,11 +61,15 @@ redis_client = redis.Redis(
 
 def fetch_one_message() -> str | None:
 
-    # Priority order: Critical system events, digests, sensor data
+    # Priority order: Critical system events, digests, join events, sensor data
 
     digest_value = fetch_redis_flow_digest()
     if digest_value != None:
         return digest_value
+    
+    join_value = fetch_redis_device_join()
+    if join_value != None:
+        return bytes(join_value)
 
     redis_queues = fetch_redis_queues()
 
@@ -92,7 +104,10 @@ def fetch_and_compress_lbdata() -> str | None:
         print("Error: LB data type not found")
         return None
 
-    lb_compressed_data = str(lbdata_types[lb_data_key]).encode() + base64.b64decode(lb_data[lb_data_key])
+    if lb_data_key == 'data':        
+        lb_compressed_data = str(lbdata_types[lb_data_key]).encode() + base64.b64decode(lb_data[lb_data_key])
+    else:
+        lb_compressed_data = str(lbdata_types[lb_data_key]).encode() + lb_data[lb_data_key]
     # lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
     
 
