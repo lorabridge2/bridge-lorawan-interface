@@ -7,7 +7,7 @@ import json
 import base64
 
 lbdata_types = {
-    "data":0,
+    "data":7,
     "timesync_req": 1,
     "system_event": 2,
     "user_event": 3,
