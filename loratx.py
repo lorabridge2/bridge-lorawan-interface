@@ -16,6 +16,8 @@ lbdata_types = {
     "hearthbeat": 6
 }
 
+# TODO: Replace these redis functions with one
+
 def fetch_redis_flow_digest() -> str | None:
     command = "LPOP lorabridge:flows:digests"
 
@@ -26,6 +28,14 @@ def fetch_redis_flow_digest() -> str | None:
     
 def fetch_redis_device_join() -> str | None:
     command = "LPOP lorabridge:device:join"
+
+    if reply := redis_client.execute_command(command):
+        return reply
+    else:
+        return None
+    
+def fetch_redis_user_event() -> str | None:
+    command = "LPOP lorabridge:events:user"
 
     if reply := redis_client.execute_command(command):
         return reply
@@ -70,6 +80,10 @@ def fetch_one_message() -> str | None:
     join_value = fetch_redis_device_join()
     if join_value != None:
         return bytes(join_value)
+    
+    user_event_value = fetch_redis_user_event()
+    if user_event_value != None:
+        return user_event_value
 
     redis_queues = fetch_redis_queues()
 
