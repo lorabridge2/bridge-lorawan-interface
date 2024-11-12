@@ -25,7 +25,7 @@ def fetch_redis_flow_digest() -> str | None:
         return reply
     else:
         return None
-    
+
 def fetch_redis_device_join() -> str | None:
     command = "LPOP lorabridge:device:join"
 
@@ -33,7 +33,7 @@ def fetch_redis_device_join() -> str | None:
         return reply
     else:
         return None
-    
+
 def fetch_redis_user_event() -> str | None:
     command = "LPOP lorabridge:events:user"
 
@@ -119,11 +119,10 @@ def fetch_and_compress_lbdata() -> str | None:
         return None
 
     if lb_data_key == 'data':        
-        lb_compressed_data = str(lbdata_types[lb_data_key]).encode() + base64.b64decode(lb_data[lb_data_key])
+        lb_compressed_data = lbdata_types[lb_data_key].to_bytes() + base64.b64decode(lb_data[lb_data_key])
     else:
-        lb_compressed_data = str(lbdata_types[lb_data_key]).encode() + lb_data[lb_data_key]
+        lb_compressed_data = lbdata_types[lb_data_key].to_bytes() + lb_data[lb_data_key]
     # lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
-    
 
     return lb_compressed_data
 
