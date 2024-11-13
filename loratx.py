@@ -13,7 +13,7 @@ lbdata_types = {
     "user_event": 3,
     "lbflow_digest": 4,
     "lbdevice_join": 5,
-    "hearthbeat": 6
+    "heartbeat": 6
 }
 
 # TODO: Replace these redis functions with one
