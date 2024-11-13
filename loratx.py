@@ -172,12 +172,13 @@ def main():
         if "tx_token" in data and timesync_ongoing and timesync_requested == False:
             ser.write(str(lbdata_types["timesync_req"]).encode())
             timesync_requested = True
-            
+
         # Transmit "tx_ok" back to the serial interface
 
         elif "tx_token" in data and timesync_ongoing == False:
             lb_message = fetch_and_compress_lbdata()
             if lb_message != None:
+                ser.reset_output_buffer()
                 ser.write(lb_message)
                 print("Sent a message")
                 heartbeat_time_start = time.time()
