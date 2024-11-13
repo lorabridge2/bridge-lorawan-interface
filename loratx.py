@@ -112,6 +112,9 @@ def fetch_and_compress_lbdata() -> str | None:
 
     lb_data = fetch_lbdata()
 
+    if lb_data == None:
+        return None
+
     lb_data_key = list(lb_data.keys())[0]
 
     if lb_data_key not in lbdata_types.keys():
