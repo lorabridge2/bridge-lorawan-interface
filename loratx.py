@@ -150,7 +150,7 @@ def main():
     # Open serial connection
     ser = serial.Serial(serial_port, baudrate)
 
-    heartbeat_time_start = time.time
+    heartbeat_time_start = time.time()
     heartbeat_interval = 60
 
     timesync_ongoing = False
