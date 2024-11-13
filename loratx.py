@@ -132,6 +132,7 @@ def push_to_command_queue(lb_command: str) -> None:
     redis_client.lpush("lbcommands", lb_command)
 
 
+
 def main():
     # Define serial port and baudrate
     serial_port = os.environ.get(
@@ -176,7 +177,7 @@ def main():
             else:
                 if time.time() - heartbeat_time_start > heartbeat_interval:
                     heartbeat_time_start = time.time()
-                    ser.write("hb")
+                    ser.write(str(lbdata_types["heartbeat"]).encode())
                     print("Sent a heartbeat message")
                 else:
                     print("Queue empty, sending nothing...")
