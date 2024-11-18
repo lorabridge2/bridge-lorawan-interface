@@ -117,7 +117,7 @@ def fetch_one_message() -> str | None:
                     # "payload": fetch_redis_string(redis_device, redis_msg[0]),
                     "payload": redis_client.getdel(
                         "lorabridge:device:{}:message:{}".format(
-                            redis_device.decode("utf-8"), redis_msg[0].decode("utf-8")
+                            redis_device.decode("utf-8"), redis_msg[0][0].decode("utf-8")
                         )
                     ),
                 }
