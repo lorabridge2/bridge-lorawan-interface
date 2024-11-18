@@ -7,59 +7,76 @@ import json
 import base64
 
 lbdata_types = {
-    "data":7,
-    "timesync_req": 1,
-    "system_event": 2,
-    "user_event": 3,
-    "lbflow_digest": 4,
-    "lbdevice_join": 5,
-    "heartbeat": 6
+    "data": b"\x07",
+    "timesync_req": b"\x01",
+    "system_event": b"\x02",
+    "lorabridge:events:user": b"\x03",
+    "lorabridge:flows:digests": b"\x04",
+    "lorabridge:device:join": b"\x05",
+    "heartbeat": b"\x06",
 }
+
+SIMPLE_QUEUES = [
+    "lorabridge:flows:digests",
+    "lorabridge:device:join",
+    "lorabridge:events:user",
+]
 
 # TODO: Replace these redis functions with one
 
-def fetch_redis_flow_digest() -> str | None:
-    command = "LPOP lorabridge:flows:digests"
 
-    if reply := redis_client.execute_command(command):
-        return reply
-    else:
-        return None
-
-def fetch_redis_device_join() -> str | None:
-    command = "LPOP lorabridge:device:join"
-
-    if reply := redis_client.execute_command(command):
-        return reply
-    else:
-        return None
-
-def fetch_redis_user_event() -> str | None:
-    command = "LPOP lorabridge:events:user"
-
-    if reply := redis_client.execute_command(command):
-        return reply
-    else:
-        return None
-
-def fetch_redis_string(ieee: str, hash: str) -> str | None:
-    command = "GETDEL lorabridge:device:{}:message:{}".format(
-        ieee.decode("utf-8"), hash.decode("utf-8")
-    )
-    print(command)
-    if reply := redis_client.execute_command(command):
-        return reply
+# def fetch_simple_queue(key:str) -> str | None:
+#     # command = "LPOP lorabridge:flows:digests"
+#     return redis_client.lpop(key)
+# if reply := redis_client.lpop(key):
+#     return reply
+# else:
+#     return None
 
 
-def fetch_redis_queues() -> str | None:
-    if reply := redis_client.smembers("lorabridge:device:index"):
-        return reply
+# def fetch_redis_flow_digest() -> str | None:
+#     command = "LPOP lorabridge:flows:digests"
+
+#     if reply := redis_client.execute_command(command):
+#         return reply
+#     else:
+#         return None
+
+# def fetch_redis_device_join() -> str | None:
+#     command = "LPOP lorabridge:device:join"
+
+#     if reply := redis_client.execute_command(command):
+#         return reply
+#     else:
+#         return None
+
+# def fetch_redis_user_event() -> str | None:
+#     command = "LPOP lorabridge:events:user"
+
+#     if reply := redis_client.execute_command(command):
+#         return reply
+#     else:
+#         return None
 
 
-def fetch_redis_message(ieee: str) -> str | None:
-    command = "ZPOPMIN lorabridge:queue:{}".format(ieee.decode("utf-8"))
-    if reply := redis_client.execute_command(command):
-        return reply
+# def fetch_redis_string(ieee: str, hash: str) -> str | None:
+#     command = "GETDEL lorabridge:device:{}:message:{}".format(
+#         ieee.decode("utf-8"), hash.decode("utf-8")
+#     )
+#     print(command)
+#     if reply := redis_client.execute_command(command):
+#         return reply
+
+
+# def fetch_redis_queues() -> str | None:
+#     if reply := redis_client.smembers("lorabridge:device:index"):
+#         return reply
+
+
+# def fetch_redis_message(ieee: str) -> str | None:
+#     command = "ZPOPMIN lorabridge:queue:{}".format(ieee.decode("utf-8"))
+#     if reply := redis_client.execute_command(command):
+#         return reply
 
 
 redis_client = redis.Redis(
@@ -73,71 +90,95 @@ def fetch_one_message() -> str | None:
 
     # Priority order: Critical system events, digests, join events, sensor data
 
-    digest_value = fetch_redis_flow_digest()
-    if digest_value != None:
-        return digest_value
-    
-    join_value = fetch_redis_device_join()
-    if join_value != None:
-        return bytes(join_value)
-    
-    user_event_value = fetch_redis_user_event()
-    if user_event_value != None:
-        return user_event_value
+    for queue in SIMPLE_QUEUES:
+        if digest_value := redis_client.lpop(queue):
+            return {"type": lbdata_types[queue], "payload": digest_value}
 
-    redis_queues = fetch_redis_queues()
+    # digest_value = fetch_redis_flow_digest()
+    # if digest_value != None:
+    #     return digest_value
 
-    if redis_queues != None:
-        for redis_queue in redis_queues:
-            redis_msg = fetch_redis_message(redis_queue)
-            if redis_msg == None:
-                continue
-            return fetch_redis_string(redis_queue, redis_msg[0])
+    # join_value = fetch_redis_device_join()
+    # if join_value != None:
+    #     return bytes(join_value)
 
-def fetch_lbdata() -> dict | None:
-    lb_data_string = fetch_one_message()
-    lb_data = {}
+    # user_event_value = fetch_redis_user_event()
+    # if user_event_value != None:
+    #     return user_event_value
 
-    print("lbdata fetch got: ", lb_data_string)
+    if redis_devices := redis_client.smembers("lorabridge:device:index"):
+        for redis_device in redis_devices:
+            # redis_msg = fetch_redis_message(redis_device)
+            if redis_msg := redis_client.zpopmin(
+                "lorabridge:queue:{}".format(redis_device.decode("utf-8"))
+            ):
+                return {
+                    "type": lbdata_types["data"],
+                    # "payload": fetch_redis_string(redis_device, redis_msg[0]),
+                    "payload": redis_client.getdel(
+                        "lorabridge:device:{}:message:{}".format(
+                            redis_device.decode("utf-8"), redis_msg[0].decode("utf-8")
+                        )
+                    ),
+                }
+            # if redis_msg == None:
+            #     continue
+            # return {
+            #     "type": lbdata_types["data"],
+            #     "payload": fetch_redis_string(redis_device, redis_msg[0]),
+            # }
 
-    if lb_data_string != None:
-        try:
-            lb_data = json.loads(lb_data_string)
-        except ValueError as e:
-            print("Error: LB Data string has invalid format")
-            return None
-        return lb_data
+
+# def fetch_lbdata() -> dict | None:
+#     lb_data_string = fetch_one_message()
+#     lb_data = {}
+
+#     print("lbdata fetch got: ", lb_data_string)
+
+#     if lb_data_string != None:
+#         try:
+#             lb_data = json.loads(lb_data_string)
+#         except ValueError as e:
+#             print("Error: LB Data string has invalid format")
+#             return None
+#         return lb_data
+
 
 def fetch_and_compress_lbdata() -> str | None:
+    # lb_data = fetch_one_message()
+    if lb_data := fetch_one_message():
+        return lb_data["type"] + lb_data["payload"]
+    # lb_data = fetch_lbdata()
 
-    lb_data = fetch_lbdata()
+    # if lb_data == None:
+    #     return
 
-    if lb_data == None:
-        return None
+    # lb_data_key = list(lb_data.keys())[0]
 
-    lb_data_key = list(lb_data.keys())[0]
+    # if lb_data_key not in lbdata_types.keys():
+    #     print("Error: LB data type not found")
+    #     return
 
-    if lb_data_key not in lbdata_types.keys():
-        print("Error: LB data type not found")
-        return None
+    # if lb_data_key == "data":
+    #     lb_compressed_data = lbdata_types[lb_data_key].to_bytes(
+    #         length=1, byteorder="big"
+    #     ) + base64.b64decode(lb_data[lb_data_key])
+    # elif lb_data_key == "lbdevice_join":
+    #     lb_compressed_data = (
+    #         lbdata_types[lb_data_key].to_bytes(length=1, byteorder="big")
+    #         + lb_data[lb_data_key].encode()
+    #     )
+    # else:
+    #     lb_compressed_data = (
+    #         lbdata_types[lb_data_key].to_bytes(length=1, byteorder="big")
+    #         + lb_data[lb_data_key]
+    #     )
 
-    if lb_data_key == 'data':        
-        lb_compressed_data = lbdata_types[lb_data_key].to_bytes(
-            length=1, byteorder="big"
-        ) + base64.b64decode(lb_data[lb_data_key])
-    else:
-        lb_compressed_data = (
-            lbdata_types[lb_data_key].to_bytes(length=1, byteorder="big")
-            + lb_data[lb_data_key]
-        )
-    # lb_compressed_data = (str(lbdata_types[lb_data_key])+str(lb_data[lb_data_key])).encode()
-
-    return lb_compressed_data
+    # return lb_compressed_data
 
 
 def push_to_command_queue(lb_command: str) -> None:
     redis_client.lpush("lbcommands", lb_command)
-
 
 
 def main():
@@ -166,11 +207,13 @@ def main():
             push_to_command_queue(data[8:])
 
         if "LBTIME" in data:
-            print("Updating system time with an epoch value got from LoRaWAN timesync response:", data[8:])
-            date_call_cmd = "date -d \'@"+data[8:]+"\'"
+            print(
+                "Updating system time with an epoch value got from LoRaWAN timesync response:",
+                data[8:],
+            )
+            date_call_cmd = "date -d '@" + data[8:] + "'"
             os.system(date_call_cmd)
             timesync_ongoing = False
-
 
         if "tx_token" in data and timesync_ongoing and timesync_requested == False:
             ser.write(bytes([lbdata_types["timesync_req"]]))
@@ -186,7 +229,7 @@ def main():
                 print("Sent a message")
                 heartbeat_time_start = time.time()
             else:
-                if time.time() - heartbeat_time_start > heartbeat_interval:                    
+                if time.time() - heartbeat_time_start > heartbeat_interval:
                     ser.write(bytes([lbdata_types["heartbeat"]]))
                     print("Sent a heartbeat message")
                     heartbeat_time_start = time.time()
