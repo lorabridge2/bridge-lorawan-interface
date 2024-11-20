@@ -17,7 +17,9 @@ lbdata_types = {
 }
 
 SIMPLE_QUEUES = [
+    "lorabridge:launchpad"
     "lorabridge:flows:digests",
+    "lorabridge:device:name",
     "lorabridge:device:join",
     "lorabridge:events:user",
 ]
