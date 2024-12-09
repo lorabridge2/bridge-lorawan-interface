@@ -14,10 +14,11 @@ lbdata_types = {
     "lorabridge:flows:digests": b"\x04",
     "lorabridge:device:join": b"\x05",
     "heartbeat": b"\x06",
+    "lorabridge:device:name": b"\x08",
 }
 
 SIMPLE_QUEUES = [
-    "lorabridge:launchpad",
+    # "lorabridge:launchpad",
     "lorabridge:flows:digests",
     "lorabridge:device:name",
     "lorabridge:device:join",
