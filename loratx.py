@@ -219,7 +219,7 @@ def main():
             timesync_ongoing = False
 
         if "tx_token" in data and timesync_ongoing and timesync_requested == False:
-            ser.write(bytes([lbdata_types["timesync_req"]]))
+            ser.write(lbdata_types["timesync_req"])
             timesync_requested = True
 
         # Transmit "tx_ok" back to the serial interface
@@ -233,7 +233,7 @@ def main():
                 heartbeat_time_start = time.time()
             else:
                 if time.time() - heartbeat_time_start > heartbeat_interval:
-                    ser.write(bytes([lbdata_types["heartbeat"]]))
+                    ser.write(lbdata_types["heartbeat"])
                     print("Sent a heartbeat message")
                     heartbeat_time_start = time.time()
                 else:
