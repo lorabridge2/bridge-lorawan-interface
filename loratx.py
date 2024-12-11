@@ -89,6 +89,21 @@ redis_client = redis.Redis(
 )
 
 
+def populate_uplink_launchpad():
+     if redis_devices := redis_client.smembers("lorabridge:device:index"):
+        for redis_device in redis_devices:
+            # redis_msg = fetch_redis_message(redis_device)
+            if redis_msg := redis_client.zpopmin(
+                "lorabridge:queue:{}".format(redis_device.decode("utf-8"))
+            ):
+                
+                lb_measurement = redis_client.getdel(
+                        "lorabridge:device:{}:message:{}".format(
+                            redis_device.decode("utf-8"), redis_msg[0][0].decode("utf-8")
+                        )
+                    )
+                redis_client.lpush("lorabridge:launchpad", lb_measurement)
+
 def fetch_one_message() -> str | None:
 
     # Priority order: Critical system events, digests, join events, sensor data
@@ -97,6 +112,22 @@ def fetch_one_message() -> str | None:
         if digest_value := redis_client.lpop(queue):
             return {"type": lbdata_types[queue], "payload": digest_value}
 
+    
+
+    if launchpad_entry := redis_client.lpop("lorabridge:launchpad"):
+        return {
+            "type": lbdata_types["data"],
+            "payload": launchpad_entry
+        }
+    else: # If launchpad is empty, populate queue and try to fetch again
+        populate_uplink_launchpad()
+        if launchpad_reentry := redis_client.lpop("lorabridge:launchpad")
+            return {
+            "type": lbdata_types["data"],
+            "payload": launchpad_entry
+            }
+
+    return None
     # digest_value = fetch_redis_flow_digest()
     # if digest_value != None:
     #     return digest_value
@@ -109,21 +140,23 @@ def fetch_one_message() -> str | None:
     # if user_event_value != None:
     #     return user_event_value
 
-    if redis_devices := redis_client.smembers("lorabridge:device:index"):
-        for redis_device in redis_devices:
-            # redis_msg = fetch_redis_message(redis_device)
-            if redis_msg := redis_client.zpopmin(
-                "lorabridge:queue:{}".format(redis_device.decode("utf-8"))
-            ):
-                return {
-                    "type": lbdata_types["data"],
-                    # "payload": fetch_redis_string(redis_device, redis_msg[0]),
-                    "payload": redis_client.getdel(
-                        "lorabridge:device:{}:message:{}".format(
-                            redis_device.decode("utf-8"), redis_msg[0][0].decode("utf-8")
-                        )
-                    ),
-                }
+    #if redis_devices := redis_client.smembers("lorabridge:device:index"):
+    #    for redis_device in redis_devices:
+    #        # redis_msg = fetch_redis_message(redis_device)
+    #        if redis_msg := redis_client.zpopmin(
+    #            "lorabridge:queue:{}".format(redis_device.decode("utf-8"))
+    #        ):
+    #            return {
+    #                "type": lbdata_types["data"],
+    #                # "payload": fetch_redis_string(redis_device, redis_msg[0]),
+    #                "payload": redis_client.getdel(
+    #                    "lorabridge:device:{}:message:{}".format(
+    #                        redis_device.decode("utf-8"), redis_msg[0][0].decode("utf-8")
+    #                    )
+    #                ),
+    #            }
+            
+
             # if redis_msg == None:
             #     continue
             # return {
