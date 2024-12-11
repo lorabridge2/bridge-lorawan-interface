@@ -121,7 +121,7 @@ def fetch_one_message() -> str | None:
         }
     else: # If launchpad is empty, populate queue and try to fetch again
         populate_uplink_launchpad()
-        if launchpad_reentry := redis_client.lpop("lorabridge:launchpad")
+        if launchpad_reentry := redis_client.lpop("lorabridge:launchpad"):
             return {
             "type": lbdata_types["data"],
             "payload": launchpad_entry
