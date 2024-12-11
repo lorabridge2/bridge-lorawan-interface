@@ -124,7 +124,7 @@ def fetch_one_message() -> str | None:
         if launchpad_reentry := redis_client.lpop("lorabridge:launchpad"):
             return {
             "type": lbdata_types["data"],
-            "payload": launchpad_entry
+            "payload": launchpad_reentry
             }
 
     return None
