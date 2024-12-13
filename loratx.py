@@ -9,7 +9,7 @@ import base64
 lbdata_types = {
     "data": b"\x07",
     "timesync_req": b"\x01",
-    "system_event": b"\x02",
+    "lorabridge:events:system": b"\x02",
     "lorabridge:events:user": b"\x03",
     "lorabridge:flows:digests": b"\x04",
     "lorabridge:device:join": b"\x05",
@@ -23,6 +23,7 @@ SIMPLE_QUEUES = [
     "lorabridge:device:name",
     "lorabridge:device:join",
     "lorabridge:events:user",
+    "lorabridge:events:system"    
 ]
 
 # TODO: Replace these redis functions with one
