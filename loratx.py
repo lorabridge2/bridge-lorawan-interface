@@ -266,6 +266,7 @@ def main():
                 heartbeat_time_start = time.time()
             else:
                 if time.time() - heartbeat_time_start > heartbeat_interval:
+                    ser.reset_output_buffer()
                     ser.write(lbdata_types["heartbeat"])
                     print("Sent a heartbeat message")
                     heartbeat_time_start = time.time()
