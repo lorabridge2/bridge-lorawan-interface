@@ -47,7 +47,8 @@ def populate_uplink_launchpad():
                         redis_device.decode("utf-8"), redis_msg[0][0].decode("utf-8")
                     )
                 )
-                redis_client.lpush("lorabridge:launchpad", lb_measurement)
+                if lb_measurement:
+                    redis_client.lpush("lorabridge:launchpad", lb_measurement)
 
 
 def fetch_one_message() -> str | None:
