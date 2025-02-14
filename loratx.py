@@ -135,6 +135,7 @@ timesync_ongoing = True
 
 
 def main():
+    global timesync_ongoing
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
     # Define serial port and baudrate
