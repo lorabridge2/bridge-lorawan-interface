@@ -5,6 +5,8 @@ import serial
 import time
 import http.client
 import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 lbdata_types = {
     "data": b"\x07",
@@ -26,12 +28,49 @@ SIMPLE_QUEUES = [
     "lorabridge:events:system",
 ]
 
+NODERED_HOST = "node-red:1880"
+NODERED_INTERVAL = 30.0
 
 redis_client = redis.Redis(
     host=os.environ.get("REDIS_HOST", "localhost"),
     port=int(os.environ.get("REDIS_PORT", 6379)),
     db=int(os.environ.get("REDIS_DB", 0)),
 )
+
+
+# def check_nodered_state():
+#     threading.Timer(NODERED_INTERVAL, check_nodered_state).start()
+#     conn = http.client.HTTPConnection(NODERED_HOST)
+#     conn.request("GET", "/flows/state")
+#     response = conn.getresponse()
+#     conn.close()
+#     if response.status == 200:
+#         print("Retrieving nodered runtime successful")
+#         state = json.loads(response.read())
+#         print(state)
+#         if state["state"] == "stop":
+#             start_nodered_runtime()
+#     else:
+#         print("Error: Retrieving nodered runtime failed!")
+
+
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(f'{{"state":"{"stop" if timesync_ongoing else "start"}"}}'.encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
+def run_server():
+    server_address = ("", 8000)  # Listen on port 8000
+    httpd = HTTPServer(server_address, SimpleHandler)
+    print("Serving on port 8000...")
+    httpd.serve_forever()
 
 
 def populate_uplink_launchpad():
@@ -79,7 +118,25 @@ def push_to_command_queue(lb_command: str) -> None:
     redis_client.lpush("lbcommands", lb_command)
 
 
+def start_nodered_runtime():
+    conn = http.client.HTTPConnection(NODERED_HOST)
+    conn.request(
+        "POST", "/flows/state", json.dumps({"state": "start"}), {"Content-Type": "application/json"}
+    )
+    response = conn.getresponse()
+    conn.close()
+    if response.status == 200:
+        print("Starting nodered runtime successful")
+    else:
+        print("Error: Starting nodered runtime failed!")
+
+
+timesync_ongoing = True
+
+
 def main():
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
     # Define serial port and baudrate
     serial_port = os.environ.get(
         "SERIAL_PORT", "/dev/ttyACM0"
@@ -92,7 +149,6 @@ def main():
     heartbeat_time_start = time.time()
     heartbeat_interval = 60
 
-    timesync_ongoing = True
     timesync_requested = False
 
     while True:
@@ -112,14 +168,8 @@ def main():
             date_call_cmd = "date -d '@" + data[8:] + "'"
             os.system(date_call_cmd)
             timesync_ongoing = False
-            conn = http.client.HTTPConnection('node-red:1880')
-            conn.request('POST', '/flows/state', json.dumps({'state':'start'}), {'Content-Type': 'application/json'})
-            response = conn.getresponse()
-            conn.close()
-            if response.status==200:
-                print("Starting nodered runtime successful")
-            else:
-                print("Error: Starting nodered runtime failed!")
+            start_nodered_runtime()
+            # check_nodered_state()
 
         if "tx_token" in data and timesync_ongoing and timesync_requested == False:
             ser.write(lbdata_types["timesync_req"])
