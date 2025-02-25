@@ -13,6 +13,17 @@ Features
 - Enqueueing LB commands
 - Timesync request at start-up
 
+## Environment Variables
+
+- `REDIS_HOST`: IP or hostname of Redis host
+- `REDIS_PORT`: Port used by Redis
+- `REDIS_DB`: Number of the database used inside Redis
+- `SERIAL_PORT`: Path of serial port device file
+
 ## License
 
 All the LoRaBridge software components and the documentation are licensed under GNU General Public License 3.0.
+
+## Acknowledgements
+
+The financial support from Internetstiftung/Netidee is gratefully acknowledged. The mission of Netidee is to support development of open-source tools for more accessible and versatile use of the Internet in Austria.
