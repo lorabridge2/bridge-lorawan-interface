@@ -166,7 +166,7 @@ def main():
                 "Updating system time with an epoch value got from LoRaWAN timesync response:",
                 data[8:],
             )
-            date_call_cmd = "date -d '@" + data[8:] + "'"
+            date_call_cmd = "date -s '@" + data[8:] + "'"
             os.system(date_call_cmd)
             timesync_ongoing = False
             start_nodered_runtime()
