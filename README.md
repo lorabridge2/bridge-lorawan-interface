@@ -26,4 +26,4 @@ All the LoRaBridge software components and the documentation are licensed under 
 
 ## Acknowledgements
 
-The financial support from Internetstiftung/Netidee is gratefully acknowledged. The mission of Netidee is to support development of open-source tools for more accessible and versatile use of the Internet in Austria.
+The financial support from Internetstiftung/Netidee is gratefully acknowledged. The mission of Netidee is to support development of open-source tools for more accessible and versatile use of the Internet in austria.
